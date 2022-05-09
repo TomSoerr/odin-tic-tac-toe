@@ -27,6 +27,7 @@ const builder = (() => {
     let gameRound;
     let playerOneDiv;
     let playerTwoDiv;
+    const field = [];
 
     const build = (startData) => {
       const [[playerOneName, playerOneIcon],
@@ -67,19 +68,15 @@ const builder = (() => {
 
       const gameBoardDiv = create('div', 'game-board');
       gameBoardDiv.addEventListener('click', (e) => {
-        if (
-          e.target.classList.contains('game-board-cell')
-          && (
-            !e.target.classList.contains('x-icon')
-            && !e.target.classList.contains('o-icon')
-          )
-        ) {
-          pubSub.emit('cellClick', e.target);
+        if (!e.target.className.match(/icon/)
+          && e.target.className.match(/game-board-cell/)) {
+          pubSub.emit('cellClick', e.target.id);
         }
       });
       for (let x = 0; x < 9; x += 1) {
-        const field = create('div', `cell-${x}`, 'game-board-cell');
-        gameBoardDiv.append(field);
+        const cell = create('div', `cell-${x}`, 'game-board-cell');
+        field.push(cell);
+        gameBoardDiv.append(cell);
       }
 
       gameDiv.append(gameInfoDiv, gameBoardDiv);
@@ -95,16 +92,16 @@ const builder = (() => {
     };
 
     const updateBoard = (updateData) => {
-      const [cell, turn] = updateData;
-      if (cell) {
-        cell.classList.add(`${(turn === 'x') ? 'o' : 'x'}-icon`);
-      }
-      if (turn === 'x') {
-        playerTwoDiv.classList.remove('active');
-        playerOneDiv.classList.add('active');
-      } else {
+      const [player, id, icon] = updateData;
+      if (player === 'playerOne') {
         playerOneDiv.classList.remove('active');
         playerTwoDiv.classList.add('active');
+      } else if (player === 'playerTwo') {
+        playerTwoDiv.classList.remove('active');
+        playerOneDiv.classList.add('active');
+      }
+      if (id) {
+        field[id.match(/\d$/)[0]].classList.add(`${icon}-icon`);
       }
     };
 
@@ -118,37 +115,99 @@ pubSub.on('updateInfo', builder.gamePage.updateInfo);
 pubSub.on('updateBoard', builder.gamePage.updateBoard);
 
 const game = (() => {
-  let playerTurn;
   let gameBoard;
   let maxGameRound;
   let gameRound;
-  let playerOnePoints;
-  let playerTwoPoints;
   let difficulty;
+  let playerOne;
+  let playerTwo;
+  let currentPlayer;
+
+  const player = (playerName, playerIcon, objName) => {
+    const name = playerName;
+    const icon = playerIcon;
+    const playerNum = objName;
+    let points;
+    const update = (id) => {
+      pubSub.emit('updateBoard', [currentPlayer.playerNum, id, icon]);
+      gameBoard[id.match(/\d$/)[0]] = icon;
+    };
+    return {
+      name, icon, points, playerNum, update,
+    };
+  };
+
+  const switchCurrentPlayer = () => {
+    if (currentPlayer === playerOne) {
+      currentPlayer = playerTwo;
+    } else {
+      currentPlayer = playerOne;
+    }
+  };
+  const bot = (() => {
+    let method;
+    const easyBot = () => {
+      const emptyCells = [];
+      for (let x = 0; x < gameBoard.length; x += 1) {
+        if (!gameBoard[x]) {
+          emptyCells.push(x);
+        }
+      }
+      return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+    };
+    switch (difficulty) {
+      default:
+        method = easyBot;
+    }
+
+    const pick = () => {
+      if (currentPlayer.name === 'Bot') {
+        setTimeout(() => {
+          currentPlayer.update(`cell-${method()}`);
+          switchCurrentPlayer();
+          pubSub.emit('currentUpdated', null);
+        }, 1000);
+      }
+    };
+    return { pick };
+  })();
+
+  const checkWin = null;
 
   const startGame = (startData) => {
-    const [n1, n2, round, diff] = startData;
-    playerTurn = 'x';
+    const [[playerOneName, playerOneIcon],
+      [playerTwoName, playerTwoIcon], round, diff] = startData;
     gameBoard = ['', '', '', '', '', '', '', '', ''];
     maxGameRound = round;
     gameRound = 1;
-    playerOnePoints = 0;
-    playerTwoPoints = 0;
     difficulty = diff;
+    playerOne = player(playerOneName, playerOneIcon, 'playerOne');
+    playerTwo = player(playerTwoName, playerTwoIcon, 'playerTwo');
+    currentPlayer = [playerOne, playerTwo][Math.floor(Math.random() * 2)];
     pubSub.emit('updateInfo', [1, 0, 0]);
-    pubSub.emit('updateBoard', [null, playerTurn]);
+    pubSub.emit('updateBoard', [
+      /* with every player.update() the active class will be set to the opposite
+      of the current player so that the next player can pick its game field.
+      Because that the initial value ist the opposite */
+      (currentPlayer.playerNum === 'playerTwo') ? 'playerOne' : 'playerTwo',
+      null,
+    ]);
+    if (currentPlayer.name === 'Bot') bot.pick();
   };
 
-  const updateGameBoard = (updateData) => {
-    const cell = updateData;
-    cell.classList.add(`${playerTurn}-icon`);
-    playerTurn = (playerTurn === 'x') ? 'o' : 'x';
-    pubSub.emit('updateBoard', [cell, playerTurn]);
+  const updateGameBoard = (id) => {
+    if (currentPlayer.name !== 'Bot') {
+      currentPlayer.update(id);
+      switchCurrentPlayer();
+      pubSub.emit('currentUpdated', null);
+    }
   };
 
+  // pubSub.on('currentUpdated', checkWin);
+  pubSub.on('currentUpdated', bot.pick);
   return { updateGameBoard, startGame };
 })();
 pubSub.on('startGame', game.startGame);
 pubSub.on('cellClick', game.updateGameBoard);
 
-pubSub.emit('startGame', [['Joe', 'x'], ['Bot', 'o'], 3, 'easy']); // player one is x in every case
+pubSub.emit('startGame', [['Joe', 'x'], ['Bot', 'o'], 3, 'easy']);
