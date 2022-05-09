@@ -1,3 +1,10 @@
+:root {
+  --col-1: rgb(245, 247, 250);
+  --col-2: rgb(225, 233, 238);
+  --col-3: rgb(58, 58, 58);
+  --col-4: rgb(195, 200, 211);
+  --col-5: rgb(208, 247, 203);
+}
 *, *::before, *::after {
   margin: 0;
   padding: 0;
@@ -5,6 +12,120 @@
 }
 
 #root {
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Oxygen-Sans,Ubuntu,Cantarell,"Helvetica Neue",sans-serif;
   width: 100vw;
-  height: 100vh;
+  min-height: 100vh;
 }
+
+/* GAME PAGE */
+
+#game-page {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 2rem;
+  padding: 1rem;
+  background-color: var(--col-1);
+  min-height: 100vh;
+  width: 100%;
+}
+#menu-button {
+  justify-self: start;
+  appearance: none;
+  outline: none;
+  border: none;
+  border-radius: 1rem;
+  background-color: var(--col-3);
+  color: white;
+  height: 2rem;
+  width: 6rem;
+  font-size: 1.1rem;
+}
+
+#game {
+  padding: 1rem;
+  background-color: var(--col-2);
+  border-radius: 1rem;
+  border: thin solid var(--col-4);
+}
+
+#game-info {
+  border: thin solid var(--col-4);
+  border-radius: 1rem;
+  background-color: var(--col-1);
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+#game-info .info:first-child {
+  grid-template-columns: auto auto;
+  background-color: var(--col-3);
+  color: var(--col-1);
+}
+
+#game-info .info {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+}
+
+#game-info .active {
+  background-color: var(--col-5);
+}
+
+#x-icon,
+#o-icon {
+  position: relative;
+  width: 1.3rem;
+  height: 1.3rem;
+}
+
+#x-icon::after,
+#o-icon::after {
+  width: 100%;
+  height: 100%;
+}
+
+.x-icon::after,
+.o-icon::after {
+  width: 70%;
+  height: 70%;
+  top: 15%;
+  left: 15%;
+}
+
+.x-icon::after,
+#x-icon::after {
+  content: '';
+  position: absolute;
+  background-color: var(--col-3);
+  clip-path: polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%);
+}
+
+.o-icon::after,
+#o-icon::after {
+  content: '';
+  position: absolute;
+  background-color: var(--col-3);
+  clip-path: circle(50% at 50% 50%);
+}
+
+#game-board {
+  display: grid;
+  grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+  gap: 1rem;
+  width: min(80vw, 450px);
+  height: min(80vw, 450px);
+}
+
+#game-board .game-board-cell {
+  position: relative;
+  border: thin solid var(--col-4);
+  border-radius: 1rem;
+  background-color: var(--col-1);
+}
+

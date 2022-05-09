@@ -14,10 +14,9 @@ const pubSub = (() => {
   return { on, emit };
 })();
 
-const renderer = (() => {
+const builder = (() => {
   const root = document.querySelector('#root');
 
-  // game page
   const gamePage = (() => {
     const create = (type, id = '', className = '') => {
       const el = document.createElement(type);
@@ -25,19 +24,18 @@ const renderer = (() => {
       if (className) el.classList.add(className);
       return el;
     };
-    let playerOnePoints;
-    let playerTwoPoints;
     let gameRound;
+    let playerOneDiv;
+    let playerTwoDiv;
 
-
-    const build = (names) => {
+    const build = (startData) => {
       const [[playerOneName, playerOneIcon],
-        [playerTwoName, playerTwoIcon]] = names;
+        [playerTwoName, playerTwoIcon]] = startData;
+
       const gamePageDiv = create('div', 'game-page', '');
 
       const menuButton = create('button', 'menu-button', '');
       menuButton.textContent = 'Menu';
-
 
       const gameDiv = create('div', 'game', '');
 
@@ -46,33 +44,41 @@ const renderer = (() => {
       const roundDiv = create('div', '', 'info');
       const round = create('p');
       gameRound = create('span', 'game-round');
-      gameRound.textContent = '1';
       round.append('Round ', gameRound);
       const points = create('p');
       points.textContent = 'Points';
       roundDiv.append(round, points);
 
-      const playerOneDiv = create('div', '', 'info');
+      playerOneDiv = create('div', '', 'info');
       const playerOne = create('p');
+      playerOne.textContent = `${playerOneName} `;
       const playerOneIconSpan = create('span', `${playerOneIcon}-icon`);
-      playerOne.append(`${playerOneName} `, playerOneIconSpan);
-      playerOnePoints = create('p', '', 'player-points');
-      playerOnePoints.textContent = 'Zerooo';
-      playerOneDiv.append(playerOne, playerOnePoints);
+      const playerOnePoints = create('p', '', 'player-points');
+      playerOneDiv.append(playerOne, playerOneIconSpan, playerOnePoints);
 
-      const playerTwoDiv = create('div', '', 'info');
+      playerTwoDiv = create('div', '', 'info');
       const playerTwo = create('p');
+      playerTwo.textContent = `${playerTwoName} `;
       const playerTwoIconSpan = create('span', `${playerTwoIcon}-icon`);
-      playerTwo.append(`${playerTwoName} `, playerTwoIconSpan);
-      playerTwoPoints = create('p', '', 'player-points');
-      playerTwoPoints.textContent = 'Coca Cola';
-      playerTwoDiv.append(playerTwo, playerTwoPoints);
+      const playerTwoPoints = create('p', '', 'player-points');
+      playerTwoDiv.append(playerTwo, playerTwoIconSpan, playerTwoPoints);
 
       gameInfoDiv.append(roundDiv, playerOneDiv, playerTwoDiv);
 
       const gameBoardDiv = create('div', 'game-board');
+      gameBoardDiv.addEventListener('click', (e) => {
+        if (
+          e.target.classList.contains('game-board-cell')
+          && (
+            !e.target.classList.contains('x-icon')
+            && !e.target.classList.contains('o-icon')
+          )
+        ) {
+          pubSub.emit('cellClick', e.target);
+        }
+      });
       for (let x = 0; x < 9; x += 1) {
-        const field = create('div', '', 'game-field');
+        const field = create('div', `cell-${x}`, 'game-board-cell');
         gameBoardDiv.append(field);
       }
 
@@ -81,19 +87,68 @@ const renderer = (() => {
       root.append(gamePageDiv);
     };
 
-    const update = (data) => {
-      // some code
+    const updateInfo = (updateData) => {
+      const [round, pOnePoints, pTwoPoints] = updateData;
+      gameRound.textContent = round;
+      playerOneDiv.lastChild.textContent = pOnePoints;
+      playerTwoDiv.lastChild.textContent = pTwoPoints;
     };
-    return { build, update };
+
+    const updateBoard = (updateData) => {
+      const [cell, turn] = updateData;
+      if (cell) {
+        cell.classList.add(`${(turn === 'x') ? 'o' : 'x'}-icon`);
+      }
+      if (turn === 'x') {
+        playerTwoDiv.classList.remove('active');
+        playerOneDiv.classList.add('active');
+      } else {
+        playerOneDiv.classList.remove('active');
+        playerTwoDiv.classList.add('active');
+      }
+    };
+
+    return { build, updateInfo, updateBoard };
   })();
 
-  pubSub.on('playGame', gamePage.build);
-  pubSub.on('updateGame', gamePage.update);
+  return { gamePage };
 })();
+pubSub.on('startGame', builder.gamePage.build);
+pubSub.on('updateInfo', builder.gamePage.updateInfo);
+pubSub.on('updateBoard', builder.gamePage.updateBoard);
 
-pubSub.emit('playGame', [['Joe', 'x'], ['Bot', 'o']]);
-pubSub.emit('test', [
-  [0, 1, 1],
-  [0, -1, 1],
-  [1, -1, 0],
-]);
+const game = (() => {
+  let playerTurn;
+  let gameBoard;
+  let maxGameRound;
+  let gameRound;
+  let playerOnePoints;
+  let playerTwoPoints;
+  let difficulty;
+
+  const startGame = (startData) => {
+    const [n1, n2, round, diff] = startData;
+    playerTurn = 'x';
+    gameBoard = ['', '', '', '', '', '', '', '', ''];
+    maxGameRound = round;
+    gameRound = 1;
+    playerOnePoints = 0;
+    playerTwoPoints = 0;
+    difficulty = diff;
+    pubSub.emit('updateInfo', [1, 0, 0]);
+    pubSub.emit('updateBoard', [null, playerTurn]);
+  };
+
+  const updateGameBoard = (updateData) => {
+    const cell = updateData;
+    cell.classList.add(`${playerTurn}-icon`);
+    playerTurn = (playerTurn === 'x') ? 'o' : 'x';
+    pubSub.emit('updateBoard', [cell, playerTurn]);
+  };
+
+  return { updateGameBoard, startGame };
+})();
+pubSub.on('startGame', game.startGame);
+pubSub.on('cellClick', game.updateGameBoard);
+
+pubSub.emit('startGame', [['Joe', 'x'], ['Bot', 'o'], 3, 'easy']); // player one is x in every case
