@@ -24,19 +24,26 @@ const builder = (() => {
       if (className) el.classList.add(className);
       return el;
     };
+    let gamePageDiv;
+    let menuButton;
+    let gameBoardDiv;
     let gameRound;
     let playerOneDiv;
     let playerTwoDiv;
-    const field = [];
+    let field;
 
-    const build = (startData) => {
+    const build = (data) => {
       const [[playerOneName, playerOneIcon],
-        [playerTwoName, playerTwoIcon]] = startData;
+        [playerTwoName, playerTwoIcon]] = data;
 
-      const gamePageDiv = create('div', 'game-page', '');
+      gamePageDiv = create('div', 'game-page', '');
 
-      const menuButton = create('button', 'menu-button', '');
+      menuButton = create('button', 'menu-button', '');
       menuButton.textContent = 'Menu';
+      menuButton.addEventListener('click', () => {
+        pubSub.emit('removeGame');
+        menuButton = null;
+      });
 
       const gameDiv = create('div', 'game', '');
 
@@ -66,13 +73,14 @@ const builder = (() => {
 
       gameInfoDiv.append(roundDiv, playerOneDiv, playerTwoDiv);
 
-      const gameBoardDiv = create('div', 'game-board');
+      gameBoardDiv = create('div', 'game-board');
       gameBoardDiv.addEventListener('click', (e) => {
         if (!e.target.className.match(/icon/)
           && e.target.className.match(/game-board-cell/)) {
           pubSub.emit('cellClick', e.target.id);
         }
       });
+      field = [];
       for (let x = 0; x < 9; x += 1) {
         const cell = create('div', `cell-${x}`, 'game-board-cell');
         field.push(cell);
@@ -82,6 +90,8 @@ const builder = (() => {
       gameDiv.append(gameInfoDiv, gameBoardDiv);
       gamePageDiv.append(menuButton, gameDiv);
       root.append(gamePageDiv);
+
+      pubSub.emit('startGame', data);
     };
 
     const updateInfo = (updateData) => {
@@ -100,50 +110,178 @@ const builder = (() => {
         playerTwoDiv.classList.remove('active');
         playerOneDiv.classList.add('active');
       }
-      if (id) {
-        field[id.match(/\d$/)[0]].classList.add(`${icon}-icon`);
+      if (id !== null) {
+        field[id].classList.add(`${icon}-icon`);
       }
     };
 
-    return { build, updateInfo, updateBoard };
+    const clearBoard = () => {
+      field.forEach((cell) => {
+        cell.classList.remove('x-icon', 'o-icon');
+      });
+    };
+
+    const remove = () => {
+      gameBoardDiv = null;
+      menuButton = null;
+      gamePageDiv.remove();
+      pubSub.emit('menu');
+    };
+
+    return {
+      build, updateInfo, updateBoard, clearBoard, remove,
+    };
   })();
 
-  return { gamePage };
+  const menuPage = () => {
+    const menuPageDiv = document.createElement('div');
+    menuPageDiv.id = 'menu-page';
+    const menuDiv = document.createElement('div');
+    menuDiv.id = 'menu';
+    let gameButton = document.createElement('button');
+    gameButton.id = 'game-button';
+    gameButton.textContent = 'Start game';
+
+    menuDiv.append(gameButton);
+    menuPageDiv.append(menuDiv);
+    root.append(menuPageDiv);
+
+    gameButton.addEventListener('click', () => {
+      pubSub.emit('play', [['Joe', 'o'], ['Bot', 'x'], 2, 'easy']);
+      menuPageDiv.remove();
+      gameButton = null;
+    });
+  };
+
+  const overlay = (() => {
+    const text = document.createElement('div');
+    text.id = 'overlay-text';
+    root.append(text);
+    const build = (msg) => {
+      text.style.display = 'grid';
+      root.lastElementChild.style.filter = 'blur(5px)';
+      text.textContent = msg;
+      setTimeout(() => {
+        text.style.display = 'none';
+        root.lastElementChild.style.filter = null;
+      }, 5000);
+    };
+    return { build };
+  })();
+
+  return { gamePage, menuPage, overlay };
 })();
-pubSub.on('startGame', builder.gamePage.build);
-pubSub.on('updateInfo', builder.gamePage.updateInfo);
-pubSub.on('updateBoard', builder.gamePage.updateBoard);
 
 const game = (() => {
   let gameBoard;
   let maxGameRound;
   let gameRound;
+  let moves;
   let difficulty;
   let playerOne;
   let playerTwo;
   let currentPlayer;
 
+  const noOverallWin = () => {
+    gameRound += 1;
+    if (gameRound > maxGameRound) {
+      if (playerOne.points > playerTwo.points) {
+        pubSub.emit('overlay', `${playerOne.name} is the overall Winner!`);
+      } else if (playerOne.points < playerTwo.points) {
+        pubSub.emit('overlay', `${playerTwo.name} is the overall Winner!`);
+      } else {
+        pubSub.emit('overlay', 'There is no overall Winner. Its a Draw!');
+      }
+    } else {
+      return true;
+    }
+    return false;
+  };
+
+  const noWin = () => {
+    if (moves <= 4) {
+      if (
+        (gameBoard[0] === gameBoard[1] && gameBoard[1] === gameBoard[2]
+          && gameBoard[0])
+        || (gameBoard[3] === gameBoard[4] && gameBoard[4] === gameBoard[5]
+          && gameBoard[3])
+        || (gameBoard[6] === gameBoard[7] && gameBoard[7] === gameBoard[8]
+          && gameBoard[6])
+        || (gameBoard[0] === gameBoard[3] && gameBoard[3] === gameBoard[6]
+          && gameBoard[0])
+        || (gameBoard[1] === gameBoard[4] && gameBoard[4] === gameBoard[7]
+          && gameBoard[1])
+        || (gameBoard[2] === gameBoard[5] && gameBoard[5] === gameBoard[8]
+          && gameBoard[2])
+        || (gameBoard[0] === gameBoard[4] && gameBoard[4] === gameBoard[8]
+          && gameBoard[0])
+        || (gameBoard[2] === gameBoard[4] && gameBoard[4] === gameBoard[6]
+          && gameBoard[2])
+      ) {
+        currentPlayer.points += 1;
+        if (noOverallWin()) {
+          pubSub.emit('overlay', `${currentPlayer.name} won!`);
+        } else {
+          setTimeout(() => {
+            pubSub.emit('removeGame');
+          }, 5000);
+        }
+      } else if (moves < 1) {
+        if (noOverallWin()) {
+          pubSub.emit('overlay', 'It\'s a draw!');
+        } else {
+          setTimeout(() => {
+            pubSub.emit('removeGame');
+          }, 5000);
+        }
+      } else {
+        return true;
+      }
+    } else {
+      return true;
+    }
+    return false;
+  };
+
+  const switchCurrentPlayer = () => {
+    if (noWin()) {
+      if (currentPlayer === playerOne) {
+        currentPlayer = playerTwo;
+      } else {
+        currentPlayer = playerOne;
+      }
+      pubSub.emit('playerChanged');
+    } else {
+      moves = 0;
+      setTimeout(() => {
+        pubSub.emit('clearBoard');
+        pubSub.emit('updateInfo', [
+          gameRound, playerOne.points, playerTwo.points,
+        ]);
+      }, 5000);
+    }
+  };
+
   const player = (playerName, playerIcon, objName) => {
     const name = playerName;
     const icon = playerIcon;
     const playerNum = objName;
-    let points;
+    const points = 0;
+
     const update = (id) => {
-      pubSub.emit('updateBoard', [currentPlayer.playerNum, id, icon]);
-      gameBoard[id.match(/\d$/)[0]] = icon;
+      pubSub.emit(
+        'updateBoard',
+        [currentPlayer.playerNum, id.toString().match(/\d$/)[0], icon],
+      );
+      gameBoard[id.toString().match(/\d$/)[0]] = icon;
+      moves -= 1;
+      switchCurrentPlayer();
     };
     return {
       name, icon, points, playerNum, update,
     };
   };
 
-  const switchCurrentPlayer = () => {
-    if (currentPlayer === playerOne) {
-      currentPlayer = playerTwo;
-    } else {
-      currentPlayer = playerOne;
-    }
-  };
   const bot = (() => {
     let method;
     const easyBot = () => {
@@ -153,7 +291,10 @@ const game = (() => {
           emptyCells.push(x);
         }
       }
-      return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      if (emptyCells.length > 0) {
+        return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      }
+      return null;
     };
     switch (difficulty) {
       default:
@@ -161,18 +302,15 @@ const game = (() => {
     }
 
     const pick = () => {
-      if (currentPlayer.name === 'Bot') {
+      if (currentPlayer.name === 'Bot'
+        && moves > 0) {
         setTimeout(() => {
-          currentPlayer.update(`cell-${method()}`);
-          switchCurrentPlayer();
-          pubSub.emit('currentUpdated', null);
-        }, 1000);
+          currentPlayer.update(method());
+        }, 1500);
       }
     };
     return { pick };
   })();
-
-  const checkWin = null;
 
   const startGame = (startData) => {
     const [[playerOneName, playerOneIcon],
@@ -180,6 +318,7 @@ const game = (() => {
     gameBoard = ['', '', '', '', '', '', '', '', ''];
     maxGameRound = round;
     gameRound = 1;
+    moves = 9;
     difficulty = diff;
     playerOne = player(playerOneName, playerOneIcon, 'playerOne');
     playerTwo = player(playerTwoName, playerTwoIcon, 'playerTwo');
@@ -192,22 +331,44 @@ const game = (() => {
       (currentPlayer.playerNum === 'playerTwo') ? 'playerOne' : 'playerTwo',
       null,
     ]);
-    if (currentPlayer.name === 'Bot') bot.pick();
+    pubSub.emit('playerChanged');
   };
 
   const updateGameBoard = (id) => {
-    if (currentPlayer.name !== 'Bot') {
+    if (currentPlayer.name !== 'Bot'
+      && moves > 0) {
       currentPlayer.update(id);
-      switchCurrentPlayer();
-      pubSub.emit('currentUpdated', null);
     }
   };
 
-  // pubSub.on('currentUpdated', checkWin);
-  pubSub.on('currentUpdated', bot.pick);
-  return { updateGameBoard, startGame };
+  const clearGameBoard = () => {
+    gameBoard = ['', '', '', '', '', '', '', '', ''];
+    moves = 9;
+    currentPlayer = [playerOne, playerTwo][Math.floor(Math.random() * 2)];
+    pubSub.emit('updateBoard', [
+      (currentPlayer.playerNum === 'playerTwo') ? 'playerOne' : 'playerTwo',
+      null,
+    ]);
+    pubSub.emit('playerChanged');
+  };
+
+  return {
+    updateGameBoard, startGame, clearGameBoard, bot,
+  };
 })();
+
+pubSub.on('play', builder.gamePage.build);
+pubSub.on('updateInfo', builder.gamePage.updateInfo);
+pubSub.on('updateBoard', builder.gamePage.updateBoard);
+pubSub.on('clearBoard', builder.gamePage.clearBoard);
+pubSub.on('overlay', builder.overlay.build);
+pubSub.on('removeGame', builder.gamePage.remove);
+
 pubSub.on('startGame', game.startGame);
 pubSub.on('cellClick', game.updateGameBoard);
+pubSub.on('playerChanged', game.bot.pick);
+pubSub.on('clearBoard', game.clearGameBoard);
 
-pubSub.emit('startGame', [['Joe', 'x'], ['Bot', 'o'], 3, 'easy']);
+pubSub.on('menu', builder.menuPage);
+
+pubSub.emit('menu');
