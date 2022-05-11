@@ -157,7 +157,6 @@ const builder = (() => {
     playerCircle.type = 'radio';
     playerCircle.name = 'player-icon';
     playerCircle.id = 'player-circle';
-    playerCircle.value = 'o';
     playerCircle.setAttribute('checked', 'checked');
     const playerCrossLabel = document.createElement('label');
     playerCrossLabel.textContent = 'Cross';
@@ -166,7 +165,6 @@ const builder = (() => {
     playerCross.type = 'radio';
     playerCross.name = 'player-icon';
     playerCross.id = 'player-cross';
-    playerCross.value = 'x';
     playerIconFieldset.append(
       playerIconLegend,
       playerCircleLabel,
@@ -183,11 +181,49 @@ const builder = (() => {
     difficulty.id = 'difficulty';
     const easy = document.createElement('option');
     easy.textContent = 'Easy';
+    easy.value = 'easy';
     const medium = document.createElement('option');
     medium.textContent = 'Medium';
+    medium.value = 'medium';
     const hard = document.createElement('option');
     hard.textContent = 'Hard';
+    hard.value = 'hard';
     difficulty.append(easy, medium, hard);
+
+    const roundsLabel = document.createElement('label');
+    roundsLabel.textContent = 'Rounds:';
+    roundsLabel.setAttribute('for', 'rounds');
+    const rounds = document.createElement('select');
+    rounds.name = 'rounds';
+    rounds.id = 'rounds';
+    const one = document.createElement('option');
+    one.textContent = '1';
+    one.value = '1';
+    const two = document.createElement('option');
+    two.textContent = '2';
+    two.value = '2';
+    const three = document.createElement('option');
+    three.textContent = '3';
+    three.value = '3';
+    const four = document.createElement('option');
+    four.textContent = '4';
+    four.value = '4';
+    const five = document.createElement('option');
+    five.textContent = '5';
+    five.value = '5';
+    const six = document.createElement('option');
+    six.textContent = '6';
+    six.value = '6';
+    const seven = document.createElement('option');
+    seven.textContent = '7';
+    seven.value = '7';
+    const eight = document.createElement('option');
+    eight.textContent = '8';
+    eight.value = '8';
+    const nine = document.createElement('option');
+    nine.textContent = '9';
+    nine.value = '9';
+    rounds.append(one, two, three, four, five, six, seven, eight, nine);
 
     let gameButton = document.createElement('button');
     gameButton.textContent = 'Start game';
@@ -198,6 +234,8 @@ const builder = (() => {
       playerIconFieldset,
       difficultyLabel,
       difficulty,
+      roundsLabel,
+      rounds,
       gameButton,
     );
 
@@ -207,9 +245,22 @@ const builder = (() => {
     root.append(menuPageDiv);
 
     gameButton.addEventListener('click', () => {
-      pubSub.emit('play', [['Joe', 'o'], ['Bot', 'x'], 2, 'easy']);
-      menuPageDiv.remove();
-      gameButton = null;
+      if (playerName.value) {
+        pubSub.emit('overlay', `${playerName.value} vs Bot`);
+
+        setTimeout(() => {
+          pubSub.emit('play', [
+            [playerName.value, (playerCircle.checked) ? 'o' : 'x'],
+            ['Bot', (playerCircle.checked) ? 'x' : 'o'],
+            rounds.value,
+            difficulty.value,
+          ]);
+          menuPageDiv.remove();
+          gameButton = null;
+        }, 5000);
+      } else {
+        playerName.style.borderColor = 'red';
+      }
     });
   };
 
@@ -219,7 +270,7 @@ const builder = (() => {
     root.append(text);
     const build = (msg) => {
       text.style.display = 'grid';
-      root.lastElementChild.style.filter = 'blur(5px)';
+      root.lastElementChild.style.filter = 'blur(7px)';
       text.textContent = msg;
       setTimeout(() => {
         text.style.display = 'none';
