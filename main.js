@@ -138,12 +138,72 @@ const builder = (() => {
     menuPageDiv.id = 'menu-page';
     const menuDiv = document.createElement('div');
     menuDiv.id = 'menu';
+
+    const playerNameLabel = document.createElement('label');
+    playerNameLabel.textContent = 'Player name:';
+    playerNameLabel.setAttribute('for', 'player-name');
+    const playerName = document.createElement('input');
+    playerName.type = 'text';
+    playerName.name = 'player-name';
+    playerName.id = 'player-name';
+
+    const playerIconFieldset = document.createElement('fieldset');
+    const playerIconLegend = document.createElement('legend');
+    playerIconLegend.textContent = 'Player icon:';
+    const playerCircleLabel = document.createElement('label');
+    playerCircleLabel.textContent = 'Circle';
+    playerCircleLabel.setAttribute('for', 'player-circle');
+    const playerCircle = document.createElement('input');
+    playerCircle.type = 'radio';
+    playerCircle.name = 'player-icon';
+    playerCircle.id = 'player-circle';
+    playerCircle.value = 'o';
+    playerCircle.setAttribute('checked', 'checked');
+    const playerCrossLabel = document.createElement('label');
+    playerCrossLabel.textContent = 'Cross';
+    playerCrossLabel.setAttribute('for', 'player-cross');
+    const playerCross = document.createElement('input');
+    playerCross.type = 'radio';
+    playerCross.name = 'player-icon';
+    playerCross.id = 'player-cross';
+    playerCross.value = 'x';
+    playerIconFieldset.append(
+      playerIconLegend,
+      playerCircleLabel,
+      playerCircle,
+      playerCross,
+      playerCrossLabel,
+    );
+
+    const difficultyLabel = document.createElement('label');
+    difficultyLabel.textContent = 'Difficulty:';
+    difficultyLabel.setAttribute('for', 'difficulty');
+    const difficulty = document.createElement('select');
+    difficulty.name = 'difficulty';
+    difficulty.id = 'difficulty';
+    const easy = document.createElement('option');
+    easy.textContent = 'Easy';
+    const medium = document.createElement('option');
+    medium.textContent = 'Medium';
+    const hard = document.createElement('option');
+    hard.textContent = 'Hard';
+    difficulty.append(easy, medium, hard);
+
     let gameButton = document.createElement('button');
-    gameButton.id = 'game-button';
     gameButton.textContent = 'Start game';
 
-    menuDiv.append(gameButton);
-    menuPageDiv.append(menuDiv);
+    menuDiv.append(
+      playerNameLabel,
+      playerName,
+      playerIconFieldset,
+      difficultyLabel,
+      difficulty,
+      gameButton,
+    );
+
+    const menuHeader = document.createElement('h1');
+    menuHeader.textContent = 'Tic Tac Toe';
+    menuPageDiv.append(menuHeader, menuDiv);
     root.append(menuPageDiv);
 
     gameButton.addEventListener('click', () => {

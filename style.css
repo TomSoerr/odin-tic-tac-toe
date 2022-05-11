@@ -40,30 +40,125 @@
 
 #menu-page {
   display: grid;
-  place-items:  center;
+  place-content:  start center;
+  place-items: center;
   padding: 1rem;
   background-color: var(--col-1);
   min-height: 100vh;
   width: 100%;
+  background-image: url(./img/background.svg);
+  background-size: cover;
+}
+
+#menu-page h1 {
+  font-size: 4rem;
+  font-weight: bold;
+  text-shadow: 0px 0px 20px var(--col-4);
+  color: var(--col-3);
+  margin: 15vh 0 2rem;
+  text-align: auto;
 }
 
 #menu-page #menu {
+  display: grid;
   border: thin solid var(--col-4);
   border-radius: 1rem;
   padding: 1rem;
   background-color: var(--col-2);
 }
 
-#menu-page #menu #game-button {
+#menu-page #menu input[type=text] {
+  appearance: none;
+  border: thin solid var(--col-4);
+  height: 2rem;
+  border-radius: 0.5rem;
+  font-size: 1.1rem;
+  background-color: var(--col-1);
+  padding: 0 0.5rem;
+}
+
+#menu-page #menu input[type=text]:focus {
+  outline: none;
+  border-color: var(--col-3);
+}
+
+#menu-page #menu fieldset {
+  display: grid;
+  grid-auto-flow: column;
+  justify-content: space-evenly;
+  align-items: center;
+  margin-bottom: 1rem;
+  margin-top: 2rem;
+  position: relative;
+  border-radius: 0.5rem;
+  border: thin solid var(--col-4);
+  padding: 0.5rem;
+  position: relative;
+  background-color: var(--col-1);
+}
+
+#menu-page #menu fieldset:focus-within {
+  border-color: var(--col-3);
+}
+
+#menu-page #menu fieldset legend {
+  color: var(--col-3);
+  background-color: transparent;
+  position: absolute;
+  top: 0;
+  transform: translateY(calc(-100% - 1px));
+}
+
+#menu-page #menu fieldset input[type=radio] {
+  appearance: none;
+  position: relative;
+  height: 2rem;
+  width: 2rem;
+  border: thin solid var(--col-4);
+  border-radius: 0.5rem;
+}
+
+#menu-page #menu fieldset input[type=radio]:focus {
+  outline: none;
+  background-color: var(--col-4);
+}
+
+#menu-page #menu select {
+  appearance: none;
+  height: 2rem;
+  border-radius: 0.5rem;
+  border: thin solid var(--col-4);
+  background-color: var(--col-1);
+  font-size: 1.1rem;
+  padding: 0 0.5rem;
+}
+
+#menu-page #menu select:focus {
+  outline: none;
+  border-color: var(--col-3);
+}
+
+#menu-page #menu button {
   appearance: none;
   outline: none;
   border: none;
   border-radius: 1rem;
   background-color: var(--col-3);
+  border: thin solid transparent;
   color: white;
-  padding: 0.5rem 2rem;
+  padding: 0 2rem;
+  height: 2rem;
   font-size: 1.1rem;
+  margin-top: 1rem;
 }
+
+#menu-page #menu button:focus {
+  outline: none;
+  background-color: var(--col-1);
+  border-color: var(--col-4);
+  color: var(--col-3);
+}
+
 /* GAME PAGE */
 
 #game-page {
@@ -75,6 +170,8 @@
   background-color: var(--col-1);
   min-height: 100vh;
   width: 100%;
+  background-image: url(./img/background.svg);
+  background-size: cover;
 }
 
 #menu-button {
@@ -142,7 +239,9 @@
 }
 
 .x-icon::after,
-.o-icon::after {
+.o-icon::after,
+#player-circle::after,
+#player-cross::after {
   width: 70%;
   height: 70%;
   top: 15%;
@@ -161,7 +260,8 @@
 }
 
 .x-icon::after,
-#x-icon::after {
+#x-icon::after,
+#player-cross:checked::after {
   content: '';
   position: absolute;
   background-color: var(--col-3);
@@ -169,7 +269,8 @@
 }
 
 .o-icon::after,
-#o-icon::after {
+#o-icon::after,
+#player-circle:checked::after {
   content: '';
   position: absolute;
   background-color: var(--col-3);
