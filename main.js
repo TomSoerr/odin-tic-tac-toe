@@ -182,10 +182,13 @@ const ui = (() => {
     const easy = document.createElement('option');
     easy.textContent = 'Easy';
     easy.value = 'easy';
+    const medium = document.createElement('option');
+    medium.textContent = 'Medium';
+    medium.value = 'medium';
     const hard = document.createElement('option');
     hard.textContent = 'Hard';
     hard.value = 'hard';
-    difficulty.append(easy, hard);
+    difficulty.append(easy, medium, hard);
 
     const roundsLabel = document.createElement('label');
     roundsLabel.textContent = 'Rounds:';
@@ -435,10 +438,10 @@ const game = (() => {
       const [isWinner, icon] = checkWinner(board);
       if (isWinner) return scoreTable[icon];
 
-      if (depth > 9) debugger;
       const boardCopy = [...board];
       const cells = emptyCells(board);
       if (cells.length === 0) return 0;
+      if (depth > 6) return cells[Math.floor(Math.random() * cells.length)];
       let score;
       if (isMaximizing) {
         let bestScore = -Infinity;
@@ -469,9 +472,10 @@ const game = (() => {
       return null;
     };
 
-    const ai = () => {
+    const hardBot = () => {
       const boardCopy = [...gameBoard];
       const cells = emptyCells(boardCopy);
+      if (cells.length === 9) return 4;
       scoreTable[currentPlayer.icon] = 1;
       scoreTable[currentPlayer.icon === 'x' ? 'o' : 'x'] = -1;
       let bestMove = null;
@@ -489,16 +493,37 @@ const game = (() => {
       return bestMove;
     };
 
+    const mediumBot = () => {
+      const boardCopy = [...gameBoard];
+      const cells = emptyCells(boardCopy);
+      scoreTable[currentPlayer.icon] = 1;
+      scoreTable[currentPlayer.icon === 'x' ? 'o' : 'x'] = -1;
+      let bestMove = null;
+      let bestScore = -Infinity;
+      let score;
+      cells.forEach((cell) => {
+        boardCopy[cell] = currentPlayer.icon;
+        score = minimax(boardCopy, 6, false);
+        boardCopy[cell] = '';
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = cell;
+        }
+      });
+      return bestMove;
+    };
+
     const setDifficulty = (diff) => {
       switch (diff) {
         case 'hard':
-          method = ai;
+          method = hardBot;
+          break;
+        case 'medium':
+          method = mediumBot;
           break;
         case 'easy':
           method = easyBot;
           break;
-        default:
-          console.error('Invalid difficulty');
       }
     };
 
