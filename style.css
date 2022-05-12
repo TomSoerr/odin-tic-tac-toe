@@ -285,8 +285,8 @@
   display: grid;
   grid-template: repeat(3, 1fr) / repeat(3, 1fr);
   gap: 0.5rem;
-  width: min(80vw, 450px);
-  height: min(80vw, 450px);
+  width: min(75vw, 50vh);
+  height: min(75vw, 50vh);
   background-color: var(--col-3);
 }
 

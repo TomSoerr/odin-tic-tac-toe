@@ -14,7 +14,7 @@ const pubSub = (() => {
   return { on, emit };
 })();
 
-const builder = (() => {
+const ui = (() => {
   const root = document.querySelector('#root');
 
   const gamePage = (() => {
@@ -182,13 +182,10 @@ const builder = (() => {
     const easy = document.createElement('option');
     easy.textContent = 'Easy';
     easy.value = 'easy';
-    const medium = document.createElement('option');
-    medium.textContent = 'Medium';
-    medium.value = 'medium';
     const hard = document.createElement('option');
     hard.textContent = 'Hard';
     hard.value = 'hard';
-    difficulty.append(easy, medium, hard);
+    difficulty.append(easy, hard);
 
     const roundsLabel = document.createElement('label');
     roundsLabel.textContent = 'Rounds:';
@@ -288,10 +285,53 @@ const game = (() => {
   let maxGameRound;
   let gameRound;
   let moves;
-  let difficulty;
   let playerOne;
   let playerTwo;
   let currentPlayer;
+
+  const checkWinner = (board) => {
+    if (
+      (board[0] === board[1] && board[1] === board[2]
+        && board[0] === 'x')
+      || (board[3] === board[4] && board[4] === board[5]
+        && board[3] === 'x')
+      || (board[6] === board[7] && board[7] === board[8]
+        && board[6] === 'x')
+      || (board[0] === board[3] && board[3] === board[6]
+        && board[0] === 'x')
+      || (board[1] === board[4] && board[4] === board[7]
+        && board[1] === 'x')
+      || (board[2] === board[5] && board[5] === board[8]
+        && board[2] === 'x')
+      || (board[0] === board[4] && board[4] === board[8]
+        && board[0] === 'x')
+      || (board[2] === board[4] && board[4] === board[6]
+        && board[2] === 'x')
+    ) {
+      return [true, 'x'];
+    }
+    if (
+      (board[0] === board[1] && board[1] === board[2]
+        && board[0] === 'o')
+      || (board[3] === board[4] && board[4] === board[5]
+        && board[3] === 'o')
+      || (board[6] === board[7] && board[7] === board[8]
+        && board[6] === 'o')
+      || (board[0] === board[3] && board[3] === board[6]
+        && board[0] === 'o')
+      || (board[1] === board[4] && board[4] === board[7]
+        && board[1] === 'o')
+      || (board[2] === board[5] && board[5] === board[8]
+        && board[2] === 'o')
+      || (board[0] === board[4] && board[4] === board[8]
+        && board[0] === 'o')
+      || (board[2] === board[4] && board[4] === board[6]
+        && board[2] === 'o')
+    ) {
+      return [true, 'o'];
+    }
+    return [false];
+  };
 
   const noOverallWin = () => {
     gameRound += 1;
@@ -311,24 +351,7 @@ const game = (() => {
 
   const noWin = () => {
     if (moves <= 4) {
-      if (
-        (gameBoard[0] === gameBoard[1] && gameBoard[1] === gameBoard[2]
-          && gameBoard[0])
-        || (gameBoard[3] === gameBoard[4] && gameBoard[4] === gameBoard[5]
-          && gameBoard[3])
-        || (gameBoard[6] === gameBoard[7] && gameBoard[7] === gameBoard[8]
-          && gameBoard[6])
-        || (gameBoard[0] === gameBoard[3] && gameBoard[3] === gameBoard[6]
-          && gameBoard[0])
-        || (gameBoard[1] === gameBoard[4] && gameBoard[4] === gameBoard[7]
-          && gameBoard[1])
-        || (gameBoard[2] === gameBoard[5] && gameBoard[5] === gameBoard[8]
-          && gameBoard[2])
-        || (gameBoard[0] === gameBoard[4] && gameBoard[4] === gameBoard[8]
-          && gameBoard[0])
-        || (gameBoard[2] === gameBoard[4] && gameBoard[4] === gameBoard[6]
-          && gameBoard[2])
-      ) {
+      if (checkWinner(gameBoard)[0]) {
         currentPlayer.points += 1;
         if (noOverallWin()) {
           pubSub.emit('overlay', `${currentPlayer.name} won!`);
@@ -395,22 +418,89 @@ const game = (() => {
 
   const bot = (() => {
     let method;
-    const easyBot = () => {
-      const emptyCells = [];
-      for (let x = 0; x < gameBoard.length; x += 1) {
-        if (!gameBoard[x]) {
-          emptyCells.push(x);
+
+    const emptyCells = (board) => {
+      const cells = [];
+      for (let x = 0; x < board.length; x += 1) {
+        if (!board[x]) {
+          cells.push(x);
         }
       }
-      if (emptyCells.length > 0) {
-        return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+      return cells;
+    };
+
+    const scoreTable = {};
+
+    const minimax = (board, depth, isMaximizing) => {
+      const [isWinner, icon] = checkWinner(board);
+      if (isWinner) return scoreTable[icon];
+
+      if (depth > 9) debugger;
+      const boardCopy = [...board];
+      const cells = emptyCells(board);
+      if (cells.length === 0) return 0;
+      let score;
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        cells.forEach((cell) => {
+          boardCopy[cell] = currentPlayer.icon;
+          score = minimax(boardCopy, depth + 1, false);
+          boardCopy[cell] = '';
+          bestScore = Math.max(score, bestScore);
+        });
+        return bestScore;
+      }
+
+      let bestScore = Infinity;
+      cells.forEach((cell) => {
+        boardCopy[cell] = (currentPlayer.icon) === 'x' ? 'o' : 'x';
+        score = minimax(boardCopy, depth + 1, true);
+        boardCopy[cell] = '';
+        bestScore = Math.min(score, bestScore);
+      });
+      return bestScore;
+    };
+
+    const easyBot = () => {
+      const cells = emptyCells(gameBoard);
+      if (cells.length > 0) {
+        return cells[Math.floor(Math.random() * cells.length)];
       }
       return null;
     };
-    switch (difficulty) {
-      default:
-        method = easyBot;
-    }
+
+    const ai = () => {
+      const boardCopy = [...gameBoard];
+      const cells = emptyCells(boardCopy);
+      scoreTable[currentPlayer.icon] = 1;
+      scoreTable[currentPlayer.icon === 'x' ? 'o' : 'x'] = -1;
+      let bestMove = null;
+      let bestScore = -Infinity;
+      let score;
+      cells.forEach((cell) => {
+        boardCopy[cell] = currentPlayer.icon;
+        score = minimax(boardCopy, 0, false);
+        boardCopy[cell] = '';
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = cell;
+        }
+      });
+      return bestMove;
+    };
+
+    const setDifficulty = (diff) => {
+      switch (diff) {
+        case 'hard':
+          method = ai;
+          break;
+        case 'easy':
+          method = easyBot;
+          break;
+        default:
+          console.error('Invalid difficulty');
+      }
+    };
 
     const pick = () => {
       if (currentPlayer.name === 'Bot'
@@ -420,7 +510,7 @@ const game = (() => {
         }, 1500);
       }
     };
-    return { pick };
+    return { pick, setDifficulty };
   })();
 
   const startGame = (startData) => {
@@ -430,7 +520,6 @@ const game = (() => {
     maxGameRound = round;
     gameRound = 1;
     moves = 9;
-    difficulty = diff;
     playerOne = player(playerOneName, playerOneIcon, 'playerOne');
     playerTwo = player(playerTwoName, playerTwoIcon, 'playerTwo');
     currentPlayer = [playerOne, playerTwo][Math.floor(Math.random() * 2)];
@@ -442,6 +531,7 @@ const game = (() => {
       (currentPlayer.playerNum === 'playerTwo') ? 'playerOne' : 'playerTwo',
       null,
     ]);
+    bot.setDifficulty(diff);
     pubSub.emit('playerChanged');
   };
 
@@ -468,18 +558,18 @@ const game = (() => {
   };
 })();
 
-pubSub.on('play', builder.gamePage.build);
-pubSub.on('updateInfo', builder.gamePage.updateInfo);
-pubSub.on('updateBoard', builder.gamePage.updateBoard);
-pubSub.on('clearBoard', builder.gamePage.clearBoard);
-pubSub.on('overlay', builder.overlay.build);
-pubSub.on('removeGame', builder.gamePage.remove);
+pubSub.on('play', ui.gamePage.build);
+pubSub.on('updateInfo', ui.gamePage.updateInfo);
+pubSub.on('updateBoard', ui.gamePage.updateBoard);
+pubSub.on('clearBoard', ui.gamePage.clearBoard);
+pubSub.on('overlay', ui.overlay.build);
+pubSub.on('removeGame', ui.gamePage.remove);
 
 pubSub.on('startGame', game.startGame);
 pubSub.on('cellClick', game.updateGameBoard);
 pubSub.on('playerChanged', game.bot.pick);
 pubSub.on('clearBoard', game.clearGameBoard);
 
-pubSub.on('menu', builder.menuPage);
+pubSub.on('menu', ui.menuPage);
 
 pubSub.emit('menu');
