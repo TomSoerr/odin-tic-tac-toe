@@ -22,6 +22,7 @@ The easy difficulty picks a random cell.
 The medium and hard difficulties use the minimax algorithm.
 
 ## Links
+- [Imprint](https://tomsoerr.github.io/#/impressum)
 - [Live Preview](https://tomsoerr.github.io/odin-tic-tac-toe/)
 - Link to the [Assignment](https://www.theodinproject.com/lessons/node-path-javascript-tic-tac-toe)
 - See my next [Project](https://github.com/TomSoerr/odin-restaurant-page)
